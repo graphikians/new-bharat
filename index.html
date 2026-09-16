@@ -174,6 +174,10 @@
   .confirm-row{display:flex; align-items:flex-start; gap:9px; margin-top:16px; font-size:0.8rem; color:var(--ink-soft); font-weight:300; line-height:1.5; text-align:left;}
   .confirm-row input[type=checkbox]{margin-top:2px; flex-shrink:0; width:16px; height:16px; accent-color:var(--purple);}
   .disclaimer-note{font-size:0.76rem; color:var(--ink-soft); font-weight:300; margin:0 0 20px; line-height:1.5; padding:10px 13px; background:var(--lilac-soft); border-radius:10px;}
+
+  .lang-toggle{display:flex; gap:6px; margin-top:14px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:3px;}
+  .lang-opt{flex:1; background:none; border:none; padding:8px 4px; font-size:0.8rem; font-weight:500; color:var(--ink-soft); border-radius:7px; cursor:pointer;}
+  .lang-opt.active{background:var(--purple); color:#fff;}
 </style>
 </head>
 <body>
@@ -235,6 +239,10 @@
       <button class="btn btn-primary" id="openCameraBtn" style="margin-top:14px;">Camera Kholo</button>
       <div id="previewArea"></div>
       <div id="statusArea"></div>
+      <div class="lang-toggle" id="langToggle">
+        <button class="lang-opt active" data-lang="hi">Hinglish</button>
+        <button class="lang-opt" data-lang="en">English</button>
+      </div>
       <div class="actions" id="actionArea" style="display:none;">
         <button class="btn btn-primary" id="generateBtn" disabled>Report Banao</button>
         <button class="btn-quiet" id="resetBtn">Dobara photo lo</button>
@@ -252,7 +260,7 @@
   </section>
 
   <section class="view" id="view-settings">
-    <p class="lede">Har area ke liye sahi corporation/ward ka email aur/ya WhatsApp number khud verify karke yaha map karo — location detect hote hi automatically select hoga. Match na mile to default use hoga.</p>
+    <p class="lede">Ye settings sirf is device pe kaam karti hai (extra/override ke liye). App ke andar ek built-in email/WhatsApp list bhi hai jo <strong>sabhi users</strong> ko automatically milti hai — jo iss device pe test/demo ke liye hai.</p>
 
     <div class="settings-row">
       <label>Area → Email / WhatsApp Mapping</label>
@@ -287,6 +295,36 @@
 <script>
 (function(){
   "use strict";
+
+  // =====================================================================
+  // BUILT-IN AREA → EMAIL/WHATSAPP MAPPING
+  // Ye list SABHI users ko automatically milti hai (app ke code mein hi
+  // baked-in hai) — kisi ko Settings mein kuch bharne ki zaroorat nahi.
+  // Sanx: apna VERIFIED corporation/ward email aur WhatsApp number yaha
+  // add karo. "city" us area/city ke naam se match karega jo GPS se detect
+  // hota hai (jaise "Navsari", "Surat", "Bardoli").
+  // =====================================================================
+  var BUILTIN_MAPPINGS = [
+    // Verified from official municipal sources (Sept 2026) — Sanx: govt contacts change,
+    // spot-check periodically (send "Hi" on WhatsApp to confirm it's live).
+    { city: 'Surat', email: '', whatsapp: '916359930020' }, // smc.gov.in / suratmunicipal.gov.in — official WhatsApp
+    { city: 'Navsari', email: 'mc-nmc@gujarat.gov.in', whatsapp: '918799223046' }, // nmc.gujarat.gov.in — official
+    { city: 'Bardoli', email: 'npbardoli@yahoo.co.in', whatsapp: '' }, // bardolinagarpalika.org — official
+    { city: 'Ahmedabad', email: 'ccrs@ahmedabadcity.gov.in', whatsapp: '917567855303' }, // ahmedabadcity.gov.in / @AmdavadAMC — official
+    { city: 'Mumbai', email: '', whatsapp: '918169681697' }, // @mybmc official — dedicated garbage WhatsApp
+    { city: 'Bengaluru', email: 'ceswm2@gmail.com', whatsapp: '919448197197' }, // BBMP official — dedicated waste WhatsApp
+    { city: 'Bangalore', email: 'ceswm2@gmail.com', whatsapp: '919448197197' }, // same as Bengaluru (alt spelling)
+    { city: 'Hyderabad', email: '', whatsapp: '918125966586' }, // @GHMCOnline official — garbage/debris WhatsApp
+    { city: 'Kolkata', email: '', whatsapp: '919073367883' }, // @kmc_kolkata official — garbage WhatsApp
+    { city: 'Chennai', email: '', whatsapp: '919445061913' }, // Greater Chennai Corporation — WhatsApp bot
+    // Coverage gap Sanx should know about: Delhi (MCD is split into zones — no single
+    // verified city-wide WhatsApp/email found) and Pune (only a pothole-specific WhatsApp
+    // found, not general waste) need more specific research before adding.
+    // Add more areas in the same format:
+    // { city: 'Vapi', email: '...', whatsapp: '...' },
+  ];
+  var BUILTIN_DEFAULT_EMAIL = ''; // koi area match na ho to ye use hoga (sab users ke liye)
+  var BUILTIN_DEFAULT_WHATSAPP = '';
 
   var termsOverlay = document.getElementById('termsOverlay');
   (function initTerms(){
@@ -369,28 +407,50 @@
       setTimeout(function(){ saveNote.textContent=''; }, 2000);
     }catch(e){ saveNote.textContent = 'Save nahi ho paya is browser mein.'; }
   });
-  function getDefaultEmail(){ try{ return localStorage.getItem('newbharat_default_email') || ''; }catch(e){ return ''; } }
-  function getDefaultWhatsapp(){ try{ return localStorage.getItem('newbharat_default_whatsapp') || ''; }catch(e){ return ''; } }
+  function getDefaultEmail(){ try{ return localStorage.getItem('newbharat_default_email') || BUILTIN_DEFAULT_EMAIL; }catch(e){ return BUILTIN_DEFAULT_EMAIL; } }
+  function getDefaultWhatsapp(){ try{ return localStorage.getItem('newbharat_default_whatsapp') || BUILTIN_DEFAULT_WHATSAPP; }catch(e){ return BUILTIN_DEFAULT_WHATSAPP; } }
+
+  function findMatch(list, candidates){
+    for(var i=0;i<list.length;i++){
+      var key = list[i].city.toLowerCase();
+      for(var j=0;j<candidates.length;j++){
+        if(candidates[j].indexOf(key) > -1 || key.indexOf(candidates[j]) > -1){
+          return list[i];
+        }
+      }
+    }
+    return null;
+  }
 
   function resolveRecipient(detectedLocation){
-    var mappings = getMappings();
     var candidates = [];
     if(detectedLocation){
       if(detectedLocation.area) candidates.push(String(detectedLocation.area).toLowerCase());
       if(detectedLocation.city) candidates.push(String(detectedLocation.city).toLowerCase());
     }
-    for(var i=0;i<mappings.length;i++){
-      var key = mappings[i].city.toLowerCase();
-      for(var j=0;j<candidates.length;j++){
-        if(candidates[j].indexOf(key) > -1 || key.indexOf(candidates[j]) > -1){
-          return { email: mappings[i].email || getDefaultEmail(), whatsapp: mappings[i].whatsapp || getDefaultWhatsapp(), matched: mappings[i].city };
-        }
-      }
+    // 1) Is-device ke apne saved mappings (Settings mein add kiye hue) pehle check hote hai
+    var deviceMatch = findMatch(getMappings(), candidates);
+    if(deviceMatch){
+      return { email: deviceMatch.email || getDefaultEmail(), whatsapp: deviceMatch.whatsapp || getDefaultWhatsapp(), matched: deviceMatch.city };
+    }
+    // 2) App ke built-in list (sabhi users ko milti hai)
+    var builtinMatch = findMatch(BUILTIN_MAPPINGS, candidates);
+    if(builtinMatch){
+      return { email: builtinMatch.email || getDefaultEmail(), whatsapp: builtinMatch.whatsapp || getDefaultWhatsapp(), matched: builtinMatch.city };
     }
     return { email: getDefaultEmail(), whatsapp: getDefaultWhatsapp(), matched: null };
   }
 
-  var state = { file:null, compressedBlob:null, lat:null, lng:null, locStatus:'idle' };
+  var state = { file:null, compressedBlob:null, lat:null, lng:null, locStatus:'idle', language:'hi' };
+
+  var langToggle = document.getElementById('langToggle');
+  langToggle.querySelectorAll('.lang-opt').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      langToggle.querySelectorAll('.lang-opt').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      state.language = btn.dataset.lang;
+    });
+  });
 
   var locationGate = document.getElementById('locationGate');
   var locationGateStatus = document.getElementById('locationGateStatus');
@@ -535,7 +595,7 @@
       return fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: b64, mediaType: 'image/jpeg', lat: state.lat, lng: state.lng })
+        body: JSON.stringify({ imageBase64: b64, mediaType: 'image/jpeg', lat: state.lat, lng: state.lng, language: state.language })
       });
     }).then(function(res){
       return res.json().then(function(data){ return { ok: res.ok, data: data }; });
@@ -574,7 +634,22 @@
     var detected = data.detectedLocation || null;
     var resolved = resolveRecipient(detected);
     var detectedLine = detected ? (detected.area ? detected.area+', ' : '') + (detected.city || '') : 'Detect nahi ho paya';
-    var matchNote = resolved.matched ? 'Matched mapping: "'+escapeHtml(resolved.matched)+'"' : 'Koi mapping match nahi hui — default use ho raha hai';
+    var matchNote = resolved.matched ? 'Matched mapping: "'+escapeHtml(resolved.matched)+'"' : 'Koi verified mapping match nahi hui';
+
+    var swachhataBlock = '';
+    if(!resolved.matched){
+      swachhataBlock =
+        '<div class="report-field"><span class="tag">National Fallback — no app needed</span>'+
+        '<h3>CPGRAMS (Govt. of India) pe bhejo</h3>'+
+        '<p>Tumhara area hamari verified list mein nahi hai. CPGRAMS (pgportal.gov.in) Government of India ka official '+
+        'online grievance portal hai — browser mein hi khulta hai, koi app download nahi chahiye. Ye Central aur State '+
+        'dono governments se connected hai, isliye municipal/civic complaints bhi sahi department tak pahunch jaati hai. '+
+        'Ek baar quick registration karke apna complaint (is report ka text copy karke) submit kar sakte ho.</p>'+
+        '<div class="actions" style="margin-top:12px; gap:8px;">'+
+        '<button class="btn btn-secondary" id="copyComplaintBtn">Complaint Text Copy Karo</button>'+
+        '<a class="btn btn-primary" style="text-decoration:none; display:flex; align-items:center; justify-content:center;" target="_blank" rel="noopener" href="https://pgportal.gov.in/">CPGRAMS Kholo (pgportal.gov.in)</a>'+
+        '</div></div>';
+    }
 
     reportArea.innerHTML =
       '<div class="report-field"><span class="tag">Waste identification</span><h3>'+escapeHtml(data.wasteType||'—')+'</h3>'+
@@ -597,7 +672,8 @@
       '<div class="actions" style="margin-top:14px; flex-direction:row; gap:10px;">'+
       '<button class="btn btn-secondary" id="emailBtn" style="flex:1;">Email se Bhejo</button>'+
       '<button class="btn btn-primary" id="waBtn" style="flex:1;">WhatsApp se Bhejo</button>'+
-      '</div></div>';
+      '</div></div>'+
+      swachhataBlock;
 
     function buildBody(){
       var body = data.complaintBody || '';
@@ -632,6 +708,23 @@
       var text = (data.complaintSubject ? data.complaintSubject+'\n\n' : '') + buildBody();
       window.open('https://wa.me/'+num+'?text='+encodeURIComponent(text), '_blank');
     });
+
+    var copyBtn = document.getElementById('copyComplaintBtn');
+    if(copyBtn){
+      copyBtn.addEventListener('click', function(){
+        var text = (data.complaintSubject ? data.complaintSubject+'\n\n' : '') + buildBody();
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(function(){
+            copyBtn.textContent = 'Copy Ho Gaya ✓';
+            setTimeout(function(){ copyBtn.textContent = 'Complaint Text Copy Karo'; }, 2000);
+          }).catch(function(){
+            alert('Copy nahi ho paya — text manually select karke copy karo.');
+          });
+        } else {
+          alert('Ye browser copy support nahi karta — text manually select karke copy karo.');
+        }
+      });
+    }
 
     saveToLocalHistory(data);
   }

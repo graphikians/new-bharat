@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { imageBase64, mediaType, lat, lng } = req.body || {};
+    const { imageBase64, mediaType, lat, lng, language } = req.body || {};
 
     if (!imageBase64) {
       res.status(400).json({ error: 'No image provided' });
@@ -60,16 +60,31 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    const langInstruction =
+      language === 'en'
+        ? 'Write every text field (wasteType, volume, durationEstimate, severityReason, impactNear, impactFar, risks, recommendedAction, complaintSubject, complaintBody) in clear, formal English.'
+        : 'Write every text field (wasteType, volume, durationEstimate, severityReason, impactNear, impactFar, risks, recommendedAction, complaintSubject, complaintBody) in natural Hinglish (Hindi-English mix, Latin script) — the way an educated Indian citizen writes, not textbook Hindi and not pure English.';
+
     const prompt = [
-      'Tum ek Municipal Waste Assessment Officer ho jo Swachh Bharat Sundar Bharat mission ke liye',
-      'field photo se ek waste assessment report banate ho.',
+      'Tum ek senior Municipal Waste Assessment Officer ho jo Swachh Bharat Sundar Bharat mission ke liye',
+      'field photo se ek detailed, honest waste assessment report aur ek formal civic complaint banate ho.',
       '',
       'STRICT RULES:',
-      '- Sirf jo photo mein clearly dikh raha hai usi ke basis par likho, kuch bhi imagine ya exaggerate mat karo.',
-      '- Uncertain quantity/duration ke liye "approximately"/"estimated" jaisa qualifier use karo.',
-      '- Health/impact projections general scientific waste-decomposition aur vector-borne-disease knowledge',
-      '  par based hone chahiye — factual, credible tone, fear-mongering nahi.',
-      '- complaintBody Hinglish/English mix mein formal ho, civic authority ko bhejne layak ho.',
+      '- Sirf jo photo mein clearly dikh raha hai usi ke basis par likho, kuch bhi imagine mat karo.',
+      '- Uncertain quantity/duration ke liye "approximately"/"estimated" qualifier use karo.',
+      '- NO SUGAR-COATING: jo severity genuinely dikh rahi hai wahi likho — agar hazardous/severe hai to use "low" ya "minor"',
+      '  mat bolo sirf politeness ke liye. Agar genuinely minor hai to use overstate bhi mat karo. Honest, direct, factual.',
+      '- Har text field DETAILED hona chahiye — ek line ka generic jawab mat do. severityReason, impactNear, impactFar aur',
+      '  recommendedAction kam se kam 2-3 specific sentences ke hone chahiye, generic waste-hazard boilerplate nahi —',
+      '  jo is specific photo mein dikh raha hai usi ko reference karo (colors, materials, quantity, surroundings, etc).',
+      '- Health/impact projections general scientific waste-decomposition aur vector-borne-disease knowledge par based',
+      '  hone chahiye — factual aur specific, generic fear-mongering nahi, lekin genuine risk ko chhupao bhi mat.',
+      '- complaintBody EK PERSUASIVE, FORMAL civic complaint hona chahiye jo authority ko turant action lene ke liye',
+      '  convince kare: specific observed facts do, civic/public-health impact clearly state karo, Swachh Bharat Mission',
+      '  ke under civic body ki responsibility ka reference do, aur ek clear time-bound action request karo',
+      '  (jaise "within 48 hours" ya "at the earliest"). Polite lekin firm tone — request nahi, ek legitimate complaint.',
+      '',
+      langInstruction,
       '',
       locLine,
       '',
@@ -79,14 +94,15 @@ module.exports = async function handler(req, res) {
       '  "volume": string,',
       '  "durationEstimate": string,',
       '  "severityLevel": number from 1 to 5,',
-      '  "severityReason": string,',
-      '  "impactNear": string (next 3-5 days if unaddressed),',
-      '  "impactFar": string (next 15-30 days if unaddressed),',
-      '  "risks": array of short strings,',
+      '  "severityReason": string (2-3 detailed sentences, specific to this photo),',
+      '  "impactNear": string (2-3 detailed sentences — next 3-5 days if unaddressed),',
+      '  "impactFar": string (2-3 detailed sentences — next 15-30 days if unaddressed),',
+      '  "risks": array of short strings (specific, not generic),',
       '  "urgency": one of "Routine", "Priority", "Urgent",',
-      '  "recommendedAction": string,',
-      '  "complaintSubject": string,',
-      '  "complaintBody": string (ready to send, include the location info above — coordinates or landmark — if present, else [LOCATION])',
+      '  "recommendedAction": string (2-3 detailed, specific sentences),',
+      '  "complaintSubject": string (short, specific email subject line),',
+      '  "complaintBody": string (a persuasive, formal, ready-to-send complaint as described above, 4-6 sentences,',
+      '    include the location info above — coordinates or landmark — if present, else [LOCATION])',
       '}',
     ].join('\n');
 
@@ -107,7 +123,7 @@ module.exports = async function handler(req, res) {
               ],
             },
           ],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 2048 },
         }),
       }
     );
