@@ -4,9 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>New Bharat — AI Swachh Bharat Report | Design by Sanx</title>
+<meta name="description" content="Photo kheencho — AI severity, health-risk aur civic complaint banata hai. Design by Sanx.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#743AE8">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="New Bharat">
+
+<!-- Open Graph / social preview -->
+<meta property="og:title" content="New Bharat — AI Swachh Bharat Report">
+<meta property="og:description" content="Photo kheencho — AI severity, health-risk aur civic complaint banata hai. Design by Sanx.">
+<meta property="og:image" content="og-image.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="New Bharat — AI Swachh Bharat Report">
+<meta name="twitter:description" content="Photo kheencho — AI severity, health-risk aur civic complaint banata hai.">
+<meta name="twitter:image" content="og-image.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (for anonymized report logging — dashboard.html reads this) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --ink:#171022; --ink-soft:#4A4358; --paper:#FBFAFE; --paper-raised:#FFFFFF; --line:#E7E2F2;
@@ -178,6 +203,16 @@
   .lang-toggle{display:flex; gap:6px; margin-top:14px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:3px;}
   .lang-opt{flex:1; background:none; border:none; padding:8px 4px; font-size:0.8rem; font-weight:500; color:var(--ink-soft); border-radius:7px; cursor:pointer;}
   .lang-opt.active{background:var(--purple); color:#fff;}
+
+  .photo-slots{display:flex; flex-direction:column; gap:10px; margin-top:16px; text-align:left;}
+  .photo-slot{display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:12px; padding:10px 14px; background:var(--paper-raised);}
+  .photo-slot.filled{border-color:var(--leaf);}
+  .slot-thumb{width:52px; height:52px; border-radius:9px; flex-shrink:0; background:var(--lilac-soft); color:var(--purple); font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+  .slot-thumb img{width:100%; height:100%; object-fit:cover;}
+  .slot-info{flex:1; min-width:0;}
+  .slot-label{font-size:0.85rem; font-weight:500; color:var(--ink);}
+  .slot-sub{font-size:0.73rem; color:var(--ink-soft); margin-top:2px;}
+  .photo-slot button{width:auto; padding:8px 16px; font-size:0.78rem; flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -233,19 +268,48 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.4"/></svg>
       </div>
       <h2>Photo Kheencho</h2>
-      <p>Camera khulega — location capture ho chuki hai</p>
+      <p>Photo 1 (poora/wide shot) aur Photo 2 (close-up) dono zaroori hai. Photo 3 optional hai par recommended — jitne zyada angle, utni accurate report. GPS location Photo 1 ke time capture hui location hi rahegi.</p>
       <div id="lockedLocationRow"></div>
-      <input type="file" accept="image/*" capture="environment" id="photoInput">
-      <button class="btn btn-primary" id="openCameraBtn" style="margin-top:14px;">Camera Kholo</button>
-      <div id="previewArea"></div>
+
+      <div class="photo-slots">
+        <div class="photo-slot" data-idx="0">
+          <input type="file" accept="image/*" capture="environment" id="photoInput0" style="display:none;">
+          <div class="slot-thumb" id="slotThumb0">1</div>
+          <div class="slot-info">
+            <div class="slot-label">Photo 1 — Full Image</div>
+            <div class="slot-sub">Zaroori — poora area dikhna chahiye</div>
+          </div>
+          <button class="btn btn-secondary" id="slotBtn0">Kheencho</button>
+        </div>
+        <div class="photo-slot" data-idx="1">
+          <input type="file" accept="image/*" capture="environment" id="photoInput1" style="display:none;">
+          <div class="slot-thumb" id="slotThumb1">2</div>
+          <div class="slot-info">
+            <div class="slot-label">Photo 2 — Close-up</div>
+            <div class="slot-sub">Zaroori</div>
+          </div>
+          <button class="btn btn-secondary" id="slotBtn1">Kheencho</button>
+        </div>
+        <div class="photo-slot" data-idx="2">
+          <input type="file" accept="image/*" capture="environment" id="photoInput2" style="display:none;">
+          <div class="slot-thumb" id="slotThumb2">3</div>
+          <div class="slot-info">
+            <div class="slot-label">Photo 3 — Close-up</div>
+            <div class="slot-sub">Optional, par recommended</div>
+          </div>
+          <button class="btn btn-secondary" id="slotBtn2">Kheencho</button>
+        </div>
+      </div>
+
       <div id="statusArea"></div>
       <div class="lang-toggle" id="langToggle">
         <button class="lang-opt active" data-lang="hi">Hinglish</button>
         <button class="lang-opt" data-lang="en">English</button>
+        <button class="lang-opt" data-lang="gu">ગુજરાતી</button>
       </div>
-      <div class="actions" id="actionArea" style="display:none;">
+      <div class="actions" id="actionArea">
         <button class="btn btn-primary" id="generateBtn" disabled>Report Banao</button>
-        <button class="btn-quiet" id="resetBtn">Dobara photo lo</button>
+        <button class="btn-quiet" id="resetBtn">Sabhi Photo Reset Karo</button>
       </div>
     </div>
 
@@ -261,6 +325,28 @@
 
   <section class="view" id="view-settings">
     <p class="lede">Ye settings sirf is device pe kaam karti hai (extra/override ke liye). App ke andar ek built-in email/WhatsApp list bhi hai jo <strong>sabhi users</strong> ko automatically milti hai — jo iss device pe test/demo ke liye hai.</p>
+
+    <div class="settings-row">
+      <label>App Share Karo</label>
+      <div style="text-align:center; padding:10px 0;">
+        <img id="qrCodeImg" src="" alt="QR code" style="width:180px; height:180px; border-radius:10px; border:1px solid var(--line);">
+      </div>
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <input type="text" id="appLinkInput" readonly style="flex:1; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); border-radius:9px; padding:10px 12px; font-size:0.78rem; font-family:'Roboto',sans-serif;">
+        <button class="btn btn-secondary" id="copyLinkBtn" style="width:auto; padding:10px 16px;">Copy</button>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <label>Public Dashboard</label>
+      <p style="font-size:0.8rem; color:var(--ink-soft); font-weight:300; margin:0 0 10px;">Kitni reports aayi, kaunse area se, severity trends — sab yaha dikhta hai.</p>
+      <a class="btn btn-secondary" href="dashboard.html" target="_blank" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">Dashboard Kholo</a>
+    </div>
+
+    <div class="settings-row">
+      <label for="accessCodeInput">Access Code (agar Sanx ne diya ho)</label>
+      <input type="text" id="accessCodeInput" placeholder="Agar zaroori ho to yaha daalo">
+    </div>
 
     <div class="settings-row">
       <label>Area → Email / WhatsApp Mapping</label>
@@ -297,6 +383,54 @@
   "use strict";
 
   // =====================================================================
+  // FIREBASE — anonymized report logging (powers dashboard.html)
+  // Sanx: Firebase Console > Project Settings > Your apps > Web app se
+  // config copy karke yaha paste karo. Config public hona normal hai —
+  // security Firestore Rules se control hoti hai, is key se nahi.
+  // =====================================================================
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCZbzqfIDuxN2MKYuI1WJhJKPjdO0rSqUY",
+    authDomain: "new-bharat-33f79.firebaseapp.com",
+    projectId: "new-bharat-33f79",
+    storageBucket: "new-bharat-33f79.firebasestorage.app",
+    messagingSenderId: "202897904279",
+    appId: "1:202897904279:web:8dd5fa9fbedb8088088fd2"
+  };
+  var firebaseReady = false;
+  try{
+    if(FIREBASE_CONFIG.apiKey && window.firebase){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      firebaseReady = true;
+    }
+  }catch(e){}
+
+  function logReportToFirestore(reportData, resolvedRecipient, detectedLoc){
+    if(!firebaseReady) return;
+    try{
+      firebase.firestore().collection('reports').add({
+        wasteType: reportData.wasteType || null,
+        severityLevel: Number(reportData.severityLevel) || null,
+        urgency: reportData.urgency || null,
+        city: (detectedLoc && detectedLoc.city) || null,
+        area: (detectedLoc && detectedLoc.area) || null,
+        lat: state.lat != null ? state.lat : null,
+        lng: state.lng != null ? state.lng : null,
+        language: state.language,
+        matchedMapping: (resolvedRecipient && resolvedRecipient.matched) || null,
+        status: 'open',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  // Register service worker for PWA installability (Add to Home Screen)
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+
+  // =====================================================================
   // BUILT-IN AREA → EMAIL/WHATSAPP MAPPING
   // Ye list SABHI users ko automatically milti hai (app ke code mein hi
   // baked-in hai) — kisi ko Settings mein kuch bharne ki zaroorat nahi.
@@ -307,24 +441,48 @@
   var BUILTIN_MAPPINGS = [
     // Verified from official municipal sources (Sept 2026) — Sanx: govt contacts change,
     // spot-check periodically (send "Hi" on WhatsApp to confirm it's live).
-    { city: 'Surat', email: '', whatsapp: '916359930020' }, // smc.gov.in / suratmunicipal.gov.in — official WhatsApp
-    { city: 'Navsari', email: 'mc-nmc@gujarat.gov.in', whatsapp: '918799223046' }, // nmc.gujarat.gov.in — official
-    { city: 'Bardoli', email: 'npbardoli@yahoo.co.in', whatsapp: '' }, // bardolinagarpalika.org — official
-    { city: 'Ahmedabad', email: 'ccrs@ahmedabadcity.gov.in', whatsapp: '917567855303' }, // ahmedabadcity.gov.in / @AmdavadAMC — official
-    { city: 'Mumbai', email: '', whatsapp: '918169681697' }, // @mybmc official — dedicated garbage WhatsApp
-    { city: 'Bengaluru', email: 'ceswm2@gmail.com', whatsapp: '919448197197' }, // BBMP official — dedicated waste WhatsApp
-    { city: 'Bangalore', email: 'ceswm2@gmail.com', whatsapp: '919448197197' }, // same as Bengaluru (alt spelling)
-    { city: 'Hyderabad', email: '', whatsapp: '918125966586' }, // @GHMCOnline official — garbage/debris WhatsApp
-    { city: 'Kolkata', email: '', whatsapp: '919073367883' }, // @kmc_kolkata official — garbage WhatsApp
-    { city: 'Chennai', email: '', whatsapp: '919445061913' }, // Greater Chennai Corporation — WhatsApp bot
-    // Coverage gap Sanx should know about: Delhi (MCD is split into zones — no single
-    // verified city-wide WhatsApp/email found) and Pune (only a pothole-specific WhatsApp
-    // found, not general waste) need more specific research before adding.
+    // --- Gujarat's 8 Municipal Corporations (all verified) ---
+    { city: 'Surat', email: 'commissioner@suratmunicipal.gov.in', whatsapp: '916359930020', twitter: 'MySuratMySMC', instagram: 'mysuratmysmc' }, // suratmunicipal.gov.in official social list
+    { city: 'Ahmedabad', email: 'ccrs@ahmedabadcity.gov.in', whatsapp: '917567855303', twitter: 'AmdavadAMC', instagram: '' }, // ahmedabadcity.gov.in / @AmdavadAMC
+    { city: 'Vadodara', email: 'commissioner@vmc.gov.in', whatsapp: '919913166666', twitter: '', instagram: 'vmcvadodara' }, // vmc.gov.in
+    { city: 'Rajkot', email: 'mc_rmc@rmc.gov.in', whatsapp: '919512301973', twitter: 'smartcityrajkot', instagram: 'smartcityrajkot' }, // rmc.gov.in / Wikidata verified
+    { city: 'Bhavnagar', email: 'comm-bmc@gujarat.gov.in', whatsapp: '', twitter: 'BhavnagarMuni', instagram: 'bhavnagarmunicipalcorporation' }, // bmcgujarat.com official
+    { city: 'Jamnagar', email: 'mcjamnagar@gmail.com', whatsapp: '919426524365', twitter: 'mcjamnagar', instagram: 'mcjamnagar' }, // mcjamnagar.com official + official YouTube link list
+    { city: 'Junagadh', email: 'municipalcorporationjund@yahoo.co.in', whatsapp: '', twitter: '', instagram: 'municipaljunagadh' }, // junagadhmunicipal.org / junagadh.nic.in
+    { city: 'Gandhinagar', email: 'gmc8gandhinagar@gmail.com', whatsapp: '', twitter: 'GandhinagarMC', instagram: '' }, // gandhinagar.nic.in
+    // --- Other verified Gujarat Nagarpalikas ---
+    { city: 'Navsari', email: 'mc-nmc@gujarat.gov.in', whatsapp: '918799223046', twitter: 'NavsariNMC', instagram: 'navsarinmc' }, // nmc.gujarat.gov.in + official X/Instagram
+    { city: 'Bardoli', email: 'npbardoli@yahoo.co.in', whatsapp: '' }, // bardolinagarpalika.org
+    { city: 'Valsad', email: 'np_valsad@yahoo.co.in', whatsapp: '' }, // valsad.nic.in
+    { city: 'Vapi', email: 'vapimun@yahoo.com', whatsapp: '' }, // valsad.nic.in
+    { city: 'Bharuch', email: 'npbharuch@gmail.com', whatsapp: '' }, // bharuchnagarpalika.com
+    { city: 'Anand', email: 'amc-and@gujarat.gov.in', whatsapp: '' }, // indiacustomercare (Municipal Commissioner)
+    // --- North/Central/Saurashtra Gujarat districts (Sept 2026) ---
+    { city: 'Bhuj', email: 'np_bhuj@yahoo.co.in', whatsapp: '' }, // kachchh.nic.in
+    { city: 'Patan', email: 'np_patan@yahoo.co.in', whatsapp: '' }, // patan.nic.in
+    { city: 'Chanasma', email: 'np.chanasma@yahoo.com.in', whatsapp: '' }, // patan.nic.in
+    { city: 'Harij', email: 'npharij@gmail.com', whatsapp: '' }, // patan.nic.in
+    { city: 'Radhanpur', email: 'np_radhanpur@yahoo.co.in', whatsapp: '' }, // patan.nic.in
+    { city: 'Sidhpur', email: 'np_sidhhpur@yahoo.co.in', whatsapp: '' }, // patan.nic.in
+    { city: 'Nadiad', email: 'nadiadmunicipality@yahoo.com', whatsapp: '' }, // kheda.nic.in
+    { city: 'Kheda', email: 'np_kheda@yahoo.co.in', whatsapp: '' }, // kheda.nic.in
+    { city: 'Godhra', email: 'np_godhara@yahoo.com', whatsapp: '' }, // panchmahals.nic.in
+    { city: 'Halol', email: 'nphalol@yahoo.com', whatsapp: '' }, // panchmahals.nic.in
+    { city: 'Kalol', email: 'np_kaalol@yahoo.co.in', whatsapp: '' }, // panchmahals.nic.in (Panchmahal district Kalol)
+    { city: 'Sahera', email: 'np.shahera@yahoo.com', whatsapp: '' }, // panchmahals.nic.in
+    { city: 'Surendranagar', email: 'adm-snmc@gujarat.gov.in', whatsapp: '' }, // surendranagar.nic.in
+    // Baaki districts (Banaskantha, Sabarkantha, Mehsana, Morbi, Amreli, Porbandar,
+    // Devbhoomi Dwarka, Gir Somnath, Botad, Dahod, Narmada, Mahisagar, Aravalli, Dang,
+    // Tapi, Chhota Udaipur) abhi verify nahi hui — next round mein add hongi.
+    // "eNagar Gujarat" fallback neeche in sab areas ke liye kaam karta hai.
     // Add more areas in the same format:
-    // { city: 'Vapi', email: '...', whatsapp: '...' },
+    // { city: 'Morbi', email: '...', whatsapp: '...' },
   ];
   var BUILTIN_DEFAULT_EMAIL = ''; // koi area match na ho to ye use hoga (sab users ke liye)
   var BUILTIN_DEFAULT_WHATSAPP = '';
+  // Ye handle HAMESHA caption mein tag hota hai, city-specific handle ke saath — Ministry of
+  // Housing & Urban Affairs ka Swachh Bharat Mission (Urban) official account.
+  var ALWAYS_TAG_TWITTER = 'SwachhBharatGov'; // x.com/SwachhBharatGov — verified official
 
   var termsOverlay = document.getElementById('termsOverlay');
   (function initTerms(){
@@ -351,11 +509,34 @@
 
   var recipientInput = document.getElementById('defaultEmail');
   var defaultWhatsappInput = document.getElementById('defaultWhatsapp');
+  var accessCodeInput = document.getElementById('accessCodeInput');
   var saveNote = document.getElementById('saveNote');
   var mapCityInput = document.getElementById('mapCity');
   var mapEmailInput = document.getElementById('mapEmail');
   var mapWhatsappInput = document.getElementById('mapWhatsapp');
   var mappingListEl = document.getElementById('mappingList');
+
+  // QR code + app link (points at wherever this page is actually hosted, so it
+  // stays correct if a custom domain is added later)
+  (function initShareLink(){
+    var link = window.location.origin + window.location.pathname;
+    var appLinkInput = document.getElementById('appLinkInput');
+    var qrImg = document.getElementById('qrCodeImg');
+    if(appLinkInput) appLinkInput.value = link;
+    if(qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&data=' + encodeURIComponent(link);
+    var copyLinkBtn = document.getElementById('copyLinkBtn');
+    if(copyLinkBtn){
+      copyLinkBtn.addEventListener('click', function(){
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(link);
+            copyLinkBtn.textContent = 'Copied ✓';
+            setTimeout(function(){ copyLinkBtn.textContent = 'Copy'; }, 1800);
+          }
+        }catch(e){}
+      });
+    }
+  })();
 
   function getMappings(){ try{ return JSON.parse(localStorage.getItem('newbharat_mappings') || '[]'); }catch(e){ return []; } }
   function setMappings(list){ try{ localStorage.setItem('newbharat_mappings', JSON.stringify(list)); }catch(e){} }
@@ -397,16 +578,19 @@
     try{
       var savedEmail = localStorage.getItem('newbharat_default_email'); if(savedEmail) recipientInput.value = savedEmail;
       var savedWa = localStorage.getItem('newbharat_default_whatsapp'); if(savedWa) defaultWhatsappInput.value = savedWa;
+      var savedCode = localStorage.getItem('newbharat_access_code'); if(savedCode) accessCodeInput.value = savedCode;
     }catch(e){}
   })();
   document.getElementById('saveEmailBtn').addEventListener('click', function(){
     try{
       localStorage.setItem('newbharat_default_email', recipientInput.value.trim());
       localStorage.setItem('newbharat_default_whatsapp', defaultWhatsappInput.value.replace(/[^0-9]/g, ''));
+      localStorage.setItem('newbharat_access_code', accessCodeInput.value.trim());
       saveNote.textContent = 'Saved.';
       setTimeout(function(){ saveNote.textContent=''; }, 2000);
     }catch(e){ saveNote.textContent = 'Save nahi ho paya is browser mein.'; }
   });
+  function getAccessCode(){ try{ return localStorage.getItem('newbharat_access_code') || ''; }catch(e){ return ''; } }
   function getDefaultEmail(){ try{ return localStorage.getItem('newbharat_default_email') || BUILTIN_DEFAULT_EMAIL; }catch(e){ return BUILTIN_DEFAULT_EMAIL; } }
   function getDefaultWhatsapp(){ try{ return localStorage.getItem('newbharat_default_whatsapp') || BUILTIN_DEFAULT_WHATSAPP; }catch(e){ return BUILTIN_DEFAULT_WHATSAPP; } }
 
@@ -431,17 +615,17 @@
     // 1) Is-device ke apne saved mappings (Settings mein add kiye hue) pehle check hote hai
     var deviceMatch = findMatch(getMappings(), candidates);
     if(deviceMatch){
-      return { email: deviceMatch.email || getDefaultEmail(), whatsapp: deviceMatch.whatsapp || getDefaultWhatsapp(), matched: deviceMatch.city };
+      return { email: deviceMatch.email || getDefaultEmail(), whatsapp: deviceMatch.whatsapp || getDefaultWhatsapp(), twitter: deviceMatch.twitter || '', instagram: deviceMatch.instagram || '', matched: deviceMatch.city };
     }
     // 2) App ke built-in list (sabhi users ko milti hai)
     var builtinMatch = findMatch(BUILTIN_MAPPINGS, candidates);
     if(builtinMatch){
-      return { email: builtinMatch.email || getDefaultEmail(), whatsapp: builtinMatch.whatsapp || getDefaultWhatsapp(), matched: builtinMatch.city };
+      return { email: builtinMatch.email || getDefaultEmail(), whatsapp: builtinMatch.whatsapp || getDefaultWhatsapp(), twitter: builtinMatch.twitter || '', instagram: builtinMatch.instagram || '', matched: builtinMatch.city };
     }
-    return { email: getDefaultEmail(), whatsapp: getDefaultWhatsapp(), matched: null };
+    return { email: getDefaultEmail(), whatsapp: getDefaultWhatsapp(), twitter: '', instagram: '', matched: null };
   }
 
-  var state = { file:null, compressedBlob:null, lat:null, lng:null, locStatus:'idle', language:'hi' };
+  var state = { files:[null,null,null], compressedBlobs:[null,null,null], lat:null, lng:null, locStatus:'idle', language:'hi' };
 
   var langToggle = document.getElementById('langToggle');
   langToggle.querySelectorAll('.lang-opt').forEach(function(btn){
@@ -457,9 +641,6 @@
   var allowLocationBtn = document.getElementById('allowLocationBtn');
   var lockedLocationRow = document.getElementById('lockedLocationRow');
 
-  var photoInput = document.getElementById('photoInput');
-  var openCameraBtn = document.getElementById('openCameraBtn');
-  var previewArea = document.getElementById('previewArea');
   var statusArea = document.getElementById('statusArea');
   var actionArea = document.getElementById('actionArea');
   var generateBtn = document.getElementById('generateBtn');
@@ -531,28 +712,30 @@
     }, 25000);
   }
 
-  openCameraBtn.addEventListener('click', function(){ photoInput.click(); });
+  // ---------- Multi-photo slots (1 required, 2 optional close-ups) ----------
+  var SLOT_LABELS = ['Kheencho', 'Kheencho', 'Kheencho'];
+  for(var si=0; si<3; si++){
+    (function(idx){
+      var input = document.getElementById('photoInput'+idx);
+      var btn = document.getElementById('slotBtn'+idx);
+      var thumb = document.getElementById('slotThumb'+idx);
+      var slotEl = document.querySelector('.photo-slot[data-idx="'+idx+'"]');
+      btn.addEventListener('click', function(){ input.click(); });
+      input.addEventListener('change', function(){
+        errorArea.innerHTML = ''; reportArea.innerHTML = '';
+        var f = input.files && input.files[0];
+        if(!f) return;
+        state.files[idx] = f;
+        var url = URL.createObjectURL(f);
+        thumb.innerHTML = '<img src="'+url+'" alt="Photo '+(idx+1)+'">';
+        slotEl.classList.add('filled');
+        btn.textContent = 'Dobara Lo';
+        compressSlot(idx, f);
+      });
+    })(si);
+  }
 
-  photoInput.addEventListener('change', function(){
-    errorArea.innerHTML = ''; reportArea.innerHTML = '';
-    var f = photoInput.files && photoInput.files[0];
-    if(!f) return;
-    state.file = f;
-    var url = URL.createObjectURL(f);
-    previewArea.innerHTML = '<div class="preview-wrap"><img src="'+url+'" alt="Kachra photo"></div>';
-    actionArea.style.display = 'flex';
-    compressImage(f);
-  });
-
-  resetBtn.addEventListener('click', function(){
-    state.file = null; state.compressedBlob = null;
-    photoInput.value = '';
-    previewArea.innerHTML = ''; statusArea.innerHTML = '';
-    actionArea.style.display = 'none';
-    reportArea.innerHTML = ''; errorArea.innerHTML = ''; thinkingArea.innerHTML = '';
-  });
-
-  function compressImage(file){
+  function compressSlot(idx, file){
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function(){
@@ -564,17 +747,163 @@
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
       canvas.toBlob(function(blob){
-        state.compressedBlob = blob;
-        generateBtn.disabled = false;
+        state.compressedBlobs[idx] = blob;
+        updateGenerateEnabled();
       }, 'image/jpeg', 0.75);
       URL.revokeObjectURL(url);
     };
     img.src = url;
   }
 
+  function updateGenerateEnabled(){
+    generateBtn.disabled = !(state.compressedBlobs[0] && state.compressedBlobs[1]);
+  }
+
+  resetBtn.addEventListener('click', function(){
+    state.files = [null,null,null]; state.compressedBlobs = [null,null,null];
+    for(var i=0;i<3;i++){
+      document.getElementById('photoInput'+i).value = '';
+      document.getElementById('slotThumb'+i).innerHTML = String(i+1);
+      document.getElementById('slotThumb'+i).textContent = String(i+1);
+      document.getElementById('slotBtn'+i).textContent = 'Kheencho';
+      document.querySelector('.photo-slot[data-idx="'+i+'"]').classList.remove('filled');
+    }
+    statusArea.innerHTML = '';
+    reportArea.innerHTML = ''; errorArea.innerHTML = ''; thinkingArea.innerHTML = '';
+    updateGenerateEnabled();
+  });
+
   function severityClass(level){ if(level <= 2) return 'fill-low'; if(level === 3) return 'fill-mid'; return 'fill-high'; }
   function urgencyClass(u){ var v=(u||'').toLowerCase(); if(v.indexOf('urgent')>-1) return 'urgency-urgent'; if(v.indexOf('priority')>-1) return 'urgency-priority'; return 'urgency-routine'; }
   function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  // ---------- Photo-card image generator (for native share sheet / Instagram etc.) ----------
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines){
+    var words = String(text||'').split(' ');
+    var line = '';
+    var lines = [];
+    for(var i=0;i<words.length;i++){
+      var test = line + words[i] + ' ';
+      if(ctx.measureText(test).width > maxWidth && line !== ''){
+        lines.push(line.trim());
+        line = words[i] + ' ';
+        if(maxLines && lines.length >= maxLines){ break; }
+      } else {
+        line = test;
+      }
+    }
+    if(line && (!maxLines || lines.length < maxLines)) lines.push(line.trim());
+    if(maxLines && lines.length === maxLines){
+      var last = lines[maxLines-1];
+      while(ctx.measureText(last+'…').width > maxWidth && last.length > 0){ last = last.slice(0, -1); }
+      lines[maxLines-1] = last + '…';
+    }
+    for(var j=0;j<lines.length;j++){ ctx.fillText(lines[j], x, y + j*lineHeight); }
+    return y + lines.length*lineHeight;
+  }
+
+  function drawCover(ctx, img, x, y, w, h){
+    var ir = img.width / img.height, tr = w / h, sx, sy, sw, sh;
+    if(ir > tr){ sh = img.height; sw = sh * tr; sx = (img.width - sw)/2; sy = 0; }
+    else { sw = img.width; sh = sw / tr; sx = 0; sy = (img.height - sh)/2; }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function buildShareImage(data, resolved, detectedLine, lvl, captionText){
+    var noteEl = document.getElementById('shareImageNote');
+    // Copy caption immediately so it's ready to paste regardless of what happens next —
+    // Instagram's share sheet ignores prefilled text, so clipboard is the reliable path.
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText && captionText){
+        navigator.clipboard.writeText(captionText);
+        if(noteEl) noteEl.textContent = 'Caption copy ho gaya — share hone ke baad paste kar do.';
+      }
+    }catch(e){}
+
+    var W = 1080, H = 1350, photoH = 740;
+    var canvas = document.getElementById('shareCanvas');
+    canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext('2d');
+    var srcBlob = state.compressedBlobs[0] || state.files[0];
+    if(!srcBlob){ alert('Photo nahi mil rahi.'); return; }
+    var url = URL.createObjectURL(srcBlob);
+    var img = new Image();
+    img.onload = function(){
+      (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function(){
+        // background
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,W,H);
+        // top accent bar
+        ctx.fillStyle = '#743AE8'; ctx.fillRect(0,0,W,10);
+        // photo
+        drawCover(ctx, img, 0, 10, W, photoH-10);
+        // severity color
+        var sevColor = lvl<=2 ? '#1F8A5C' : (lvl===3 ? '#A6690F' : '#B23A3A');
+        // card area
+        var cardY = photoH;
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, cardY, W, H-cardY);
+        var pad = 60, cy = cardY + 64;
+        // brand
+        ctx.fillStyle = '#743AE8'; ctx.font = '700 30px Roboto, sans-serif';
+        ctx.fillText('NEW BHARAT', pad, cy);
+        ctx.fillStyle = '#6E6480'; ctx.font = '400 24px Roboto, sans-serif';
+        ctx.fillText('AI Swachh Bharat Report', pad, cy+34);
+        cy += 90;
+        // waste type headline
+        ctx.fillStyle = '#1A1224'; ctx.font = '700 44px Roboto, sans-serif';
+        cy = wrapText(ctx, data.wasteType || 'Waste Report', pad, cy, W-2*pad, 52, 2) + 14;
+        // severity + urgency pills
+        ctx.font = '700 28px Roboto, sans-serif';
+        var sevLabel = 'SEVERITY '+lvl+'/5';
+        var sevW = ctx.measureText(sevLabel).width + 40;
+        ctx.fillStyle = sevColor;
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(pad, cy, sevW, 56, 28) : ctx.fillRect(pad, cy, sevW, 56); ctx.fill();
+        ctx.fillStyle = '#FFFFFF'; ctx.fillText(sevLabel, pad+20, cy+38);
+        var urgLabel = (data.urgency || 'Routine').toUpperCase();
+        var urgW = ctx.measureText(urgLabel).width + 40;
+        ctx.fillStyle = '#F1ECFD';
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(pad+sevW+16, cy, urgW, 56, 28) : ctx.fillRect(pad+sevW+16, cy, urgW, 56); ctx.fill();
+        ctx.fillStyle = '#743AE8'; ctx.fillText(urgLabel, pad+sevW+36, cy+38);
+        cy += 100;
+        // location
+        ctx.fillStyle = '#4A4358'; ctx.font = '500 30px Roboto, sans-serif';
+        var locLine = state.lat != null ? ('📍 '+state.lat.toFixed(5)+', '+state.lng.toFixed(5)) : ('📍 '+detectedLine);
+        cy = wrapText(ctx, locLine, pad, cy, W-2*pad, 38, 1) + 20;
+        if(detectedLine && detectedLine !== 'Detect nahi ho paya' && state.lat != null){
+          ctx.fillStyle = '#6E6480'; ctx.font = '400 26px Roboto, sans-serif';
+          cy = wrapText(ctx, detectedLine, pad, cy, W-2*pad, 32, 1) + 20;
+        }
+        // impact summary
+        ctx.fillStyle = '#1A1224'; ctx.font = '400 28px Roboto, sans-serif';
+        cy = wrapText(ctx, data.impactNear || data.severityReason || '', pad, cy, W-2*pad, 38, 3) + 10;
+        // footer
+        ctx.strokeStyle = '#E9DEFB'; ctx.beginPath(); ctx.moveTo(pad, H-70); ctx.lineTo(W-pad, H-70); ctx.stroke();
+        ctx.fillStyle = '#6E6480'; ctx.font = '400 24px Roboto, sans-serif';
+        ctx.fillText('New Bharat — Design by Sanx', pad, H-32);
+
+        URL.revokeObjectURL(url);
+        canvas.toBlob(function(blob){
+          if(!blob){ alert('Image nahi ban payi.'); return; }
+          var file = new File([blob], 'new-bharat-report.png', { type: 'image/png' });
+          if(navigator.canShare && navigator.canShare({ files: [file] })){
+            navigator.share({
+              files: [file],
+              title: data.complaintSubject || 'Waste Report',
+              text: captionText || 'New Bharat — AI Swachh Bharat Report'
+            }).catch(function(){});
+          } else {
+            var dlUrl = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = dlUrl; a.download = 'new-bharat-report.png';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(function(){ URL.revokeObjectURL(dlUrl); }, 3000);
+            if(noteEl) noteEl.textContent = 'Image download ho gayi, caption bhi copy ho chuka hai — Instagram/WhatsApp mein photo attach karke caption paste kar do.';
+          }
+        }, 'image/png', 0.92);
+      });
+    };
+    img.onerror = function(){ alert('Photo load nahi ho payi.'); };
+    img.src = url;
+  }
 
   function blobToBase64(blob){
     return new Promise(function(resolve, reject){
@@ -589,13 +918,21 @@
     errorArea.innerHTML = ''; reportArea.innerHTML = '';
     generateBtn.disabled = true;
     captureCard.style.display = 'none';
-    thinkingArea.innerHTML = '<div class="thinking"><div class="thinking-bar"></div><p>Analyzing photo — 10–30 seconds</p></div>';
+    var photoCount = state.compressedBlobs.filter(Boolean).length;
+    thinkingArea.innerHTML = '<div class="thinking"><div class="thinking-bar"></div><p>'+photoCount+' photo analyze ho rahi hai — 10–30 seconds</p></div>';
 
-    blobToBase64(state.compressedBlob).then(function(b64){
+    var roles = ['full', 'closeup1', 'closeup2'];
+    var indices = [];
+    for(var i=0;i<3;i++){ if(state.compressedBlobs[i]) indices.push(i); }
+
+    Promise.all(indices.map(function(i){ return blobToBase64(state.compressedBlobs[i]); })).then(function(b64List){
+      var images = b64List.map(function(b64, k){
+        return { data: b64, mediaType: 'image/jpeg', role: roles[indices[k]] };
+      });
       return fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: b64, mediaType: 'image/jpeg', lat: state.lat, lng: state.lng, language: state.language })
+        body: JSON.stringify({ images: images, lat: state.lat, lng: state.lng, language: state.language, accessCode: getAccessCode() })
       });
     }).then(function(res){
       return res.json().then(function(data){ return { ok: res.ok, data: data }; });
@@ -639,15 +976,16 @@
     var swachhataBlock = '';
     if(!resolved.matched){
       swachhataBlock =
-        '<div class="report-field"><span class="tag">National Fallback — no app needed</span>'+
-        '<h3>CPGRAMS (Govt. of India) pe bhejo</h3>'+
-        '<p>Tumhara area hamari verified list mein nahi hai. CPGRAMS (pgportal.gov.in) Government of India ka official '+
-        'online grievance portal hai — browser mein hi khulta hai, koi app download nahi chahiye. Ye Central aur State '+
-        'dono governments se connected hai, isliye municipal/civic complaints bhi sahi department tak pahunch jaati hai. '+
-        'Ek baar quick registration karke apna complaint (is report ka text copy karke) submit kar sakte ho.</p>'+
+        '<div class="report-field"><span class="tag">Gujarat Fallback — no app needed</span>'+
+        '<h3>eNagar Gujarat pe bhejo</h3>'+
+        '<p>Tumhara area hamari verified list mein nahi hai (Gujarat ki ~150+ chhoti nagarpalikas mein se ek ho sakta '+
+        'hai jo abhi tak individually verify nahi hui). <strong>eNagar Gujarat</strong> (enagar.gujarat.gov.in) '+
+        'Gujarat Urban Development Mission ka official statewide portal hai — sabhi Nagar Nigam/Nagarpalika ke liye, '+
+        'browser mein hi khulta hai, koi app download nahi chahiye. Ek baar quick registration karke apna complaint '+
+        '(is report ka text copy karke) submit kar sakte ho.</p>'+
         '<div class="actions" style="margin-top:12px; gap:8px;">'+
         '<button class="btn btn-secondary" id="copyComplaintBtn">Complaint Text Copy Karo</button>'+
-        '<a class="btn btn-primary" style="text-decoration:none; display:flex; align-items:center; justify-content:center;" target="_blank" rel="noopener" href="https://pgportal.gov.in/">CPGRAMS Kholo (pgportal.gov.in)</a>'+
+        '<a class="btn btn-primary" style="text-decoration:none; display:flex; align-items:center; justify-content:center;" target="_blank" rel="noopener" href="https://enagar.gujarat.gov.in/">eNagar Gujarat Kholo</a>'+
         '</div></div>';
     }
 
@@ -672,7 +1010,17 @@
       '<div class="actions" style="margin-top:14px; flex-direction:row; gap:10px;">'+
       '<button class="btn btn-secondary" id="emailBtn" style="flex:1;">Email se Bhejo</button>'+
       '<button class="btn btn-primary" id="waBtn" style="flex:1;">WhatsApp se Bhejo</button>'+
-      '</div></div>'+
+      '</div>'+
+      (resolved.twitter ?
+        '<div class="actions" style="margin-top:10px;">'+
+        '<button class="btn btn-secondary" id="twitterBtn">Twitter/X pe Bhejo</button>'+
+        '</div>' : '')+
+      '<div class="actions" style="margin-top:10px;">'+
+      '<button class="btn btn-secondary" id="shareImageBtn">Photo Card Bana Ke Share Karo</button>'+
+      '<div class="save-note" id="shareImageNote"></div>'+
+      '</div>'+
+      '<canvas id="shareCanvas" width="1080" height="1350" style="display:none;"></canvas>'+
+      '</div>'+
       swachhataBlock;
 
     function buildBody(){
@@ -709,6 +1057,40 @@
       window.open('https://wa.me/'+num+'?text='+encodeURIComponent(text), '_blank');
     });
 
+    var twitterBtn = document.getElementById('twitterBtn');
+    if(twitterBtn){
+      twitterBtn.addEventListener('click', function(){
+        if(!checkConfirmed()) return;
+        var tagPart = '@' + resolved.twitter;
+        if(ALWAYS_TAG_TWITTER && ALWAYS_TAG_TWITTER.toLowerCase() !== resolved.twitter.toLowerCase()){
+          tagPart += ' @' + ALWAYS_TAG_TWITTER;
+        }
+        var shortBody = (data.complaintSubject || 'Waste complaint') + ' ' + tagPart;
+        if(state.lat != null){
+          shortBody += ' Location: https://www.google.com/maps?q='+state.lat+','+state.lng;
+        }
+        // Keep well under 280 chars
+        if(shortBody.length > 270) shortBody = shortBody.slice(0, 267) + '...';
+        window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shortBody), '_blank');
+      });
+    }
+
+    var shareImageBtn = document.getElementById('shareImageBtn');
+    if(shareImageBtn){
+      shareImageBtn.addEventListener('click', function(){
+        if(!checkConfirmed()) return;
+        var captionText = (data.complaintSubject ? data.complaintSubject+'\n\n' : '') + buildBody();
+        var handles = [];
+        if(resolved.instagram) handles.push(resolved.instagram);
+        if(resolved.twitter && resolved.twitter.toLowerCase() !== resolved.instagram.toLowerCase()) handles.push(resolved.twitter);
+        if(ALWAYS_TAG_TWITTER && handles.indexOf(ALWAYS_TAG_TWITTER) === -1) handles.push(ALWAYS_TAG_TWITTER);
+        if(handles.length){
+          captionText += '\n\n' + handles.map(function(h){ return '@'+h; }).join(' ');
+        }
+        buildShareImage(data, resolved, detectedLine, lvl, captionText);
+      });
+    }
+
     var copyBtn = document.getElementById('copyComplaintBtn');
     if(copyBtn){
       copyBtn.addEventListener('click', function(){
@@ -727,6 +1109,7 @@
     }
 
     saveToLocalHistory(data);
+    logReportToFirestore(data, resolved, detected);
   }
 
   function saveToLocalHistory(data){

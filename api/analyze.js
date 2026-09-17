@@ -12,10 +12,21 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { imageBase64, mediaType, lat, lng, language } = req.body || {};
+    const { images, lat, lng, language, accessCode } = req.body || {};
 
-    if (!imageBase64) {
+    // Optional access-code gate: set ACCESS_CODE in Vercel env vars to require
+    // it. If ACCESS_CODE is not set, the app works open (no code needed).
+    if (process.env.ACCESS_CODE && accessCode !== process.env.ACCESS_CODE) {
+      res.status(403).json({ error: 'Galat ya missing access code. Settings mein sahi code daalo.' });
+      return;
+    }
+
+    if (!Array.isArray(images) || images.length === 0 || !images[0].data) {
       res.status(400).json({ error: 'No image provided' });
+      return;
+    }
+    if (images.length > 3) {
+      res.status(400).json({ error: 'Maximum 3 photos allowed' });
       return;
     }
 
@@ -63,12 +74,19 @@ module.exports = async function handler(req, res) {
     const langInstruction =
       language === 'en'
         ? 'Write every text field (wasteType, volume, durationEstimate, severityReason, impactNear, impactFar, risks, recommendedAction, complaintSubject, complaintBody) in clear, formal English.'
+        : language === 'gu'
+        ? 'Write every text field (wasteType, volume, durationEstimate, severityReason, impactNear, impactFar, risks, recommendedAction, complaintSubject, complaintBody) in natural Gujarati (Gujarati script), formal enough for a civic complaint but clear for an ordinary citizen to read.'
         : 'Write every text field (wasteType, volume, durationEstimate, severityReason, impactNear, impactFar, risks, recommendedAction, complaintSubject, complaintBody) in natural Hinglish (Hindi-English mix, Latin script) — the way an educated Indian citizen writes, not textbook Hindi and not pure English.';
+
+    const multiImageNote =
+      images.length > 1
+        ? `\nMultiple photos of the SAME waste/site are provided (${images.length} images) — the first is a wider/full shot showing the overall area, the rest are close-ups showing more detail. Treat them as ONE incident and use ALL of them together to build a single, more accurate and detailed assessment (do not describe them as separate incidents).\n`
+        : '';
 
     const prompt = [
       'Tum ek senior Municipal Waste Assessment Officer ho jo Swachh Bharat Sundar Bharat mission ke liye',
       'field photo se ek detailed, honest waste assessment report aur ek formal civic complaint banate ho.',
-      '',
+      multiImageNote,
       'STRICT RULES:',
       '- Sirf jo photo mein clearly dikh raha hai usi ke basis par likho, kuch bhi imagine mat karo.',
       '- Uncertain quantity/duration ke liye "approximately"/"estimated" qualifier use karo.',
@@ -106,6 +124,10 @@ module.exports = async function handler(req, res) {
       '}',
     ].join('\n');
 
+    const imageParts = images.map((img) => ({
+      inline_data: { mime_type: img.mediaType || 'image/jpeg', data: img.data },
+    }));
+
     const apiRes = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent',
       {
@@ -117,10 +139,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           contents: [
             {
-              parts: [
-                { inline_data: { mime_type: mediaType || 'image/jpeg', data: imageBase64 } },
-                { text: prompt },
-              ],
+              parts: [...imageParts, { text: prompt }],
             },
           ],
           generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 2048 },
